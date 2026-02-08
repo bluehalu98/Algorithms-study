@@ -5,11 +5,10 @@
 권장 경로:
 
 ```text
-archive/<platform>/<problem_id>/
-  problem.md
-  solutions/<member>.md
+archive/<platform>/<problem_id>/<member_id>/
+  COPY BACKJOON HUB MD file
 ```
 
 예시:
-- `archive/boj/1000/problem.md`
-- `archive/boj/1000/solutions/alice.md`
+- `archive/boj/2562/ppoddo/최댓값.py`
+- `archive/boj/2562/ppoddo/README.md`

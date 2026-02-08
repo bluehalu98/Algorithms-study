@@ -1,54 +1,87 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ $# -lt 4 ]]; then
-  echo "Usage: $0 <platform> <problem_id> <member> <source_md> [title]"
-  echo "Example: $0 boj 1000 alice /tmp/boj_1000.md \"A+B\""
+if [[ $# -lt 2 ]]; then
+  echo "Usage: $0 <problem_id> <user_id> [source_dir] [platform]"
+  echo "Example 1: $0 2562 ppoddo \"./백준/Bronze/2562.최댓값\" boj"
+  echo "Example 2: $0 2562 ppoddo"
   exit 1
 fi
 
-platform="$1"
-problem_id="$2"
-member="$3"
-source_md="$4"
-title="${5:-}"
-
-if [[ ! -f "$source_md" ]]; then
-  echo "Source file not found: $source_md"
-  exit 1
-fi
+problem_id="$1"
+user_id="$2"
+source_dir="${3:-}"
+platform="${4:-boj}"
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd "$script_dir/.." && pwd)"
-problem_dir="$repo_root/archive/$platform/$problem_id"
-dest_problem="$problem_dir/problem.md"
-dest_solution="$problem_dir/solutions/$member.md"
-solution_template="$repo_root/templates/solution.md"
 
-mkdir -p "$problem_dir/solutions"
+if [[ -z "$source_dir" ]]; then
+  shopt -s nullglob
+  auto_candidates=("$repo_root/백준"/*/"$problem_id".*)
+  shopt -u nullglob
 
-if [[ ! -f "$dest_problem" ]]; then
-  cp "$repo_root/templates/problem.md" "$dest_problem"
+  if [[ ${#auto_candidates[@]} -eq 0 ]]; then
+    echo "Source directory not provided and auto-detect failed."
+    echo "Expected pattern: $repo_root/백준/*/$problem_id.*"
+    exit 1
+  fi
+
+  if [[ ${#auto_candidates[@]} -gt 1 ]]; then
+    echo "Multiple source directories found. Pass <source_dir> explicitly:"
+    for d in "${auto_candidates[@]}"; do
+      echo "  - $d"
+    done
+    exit 1
+  fi
+
+  source_dir="${auto_candidates[0]}"
 fi
 
-tmp_file="$(mktemp)"
-cp "$solution_template" "$tmp_file"
-
-if [[ -n "$title" ]]; then
-  sed -i "s/^title:.*/title: $title/" "$tmp_file"
+if [[ ! -d "$source_dir" ]]; then
+  echo "Source directory not found: $source_dir"
+  exit 1
 fi
-sed -i "s/^platform:.*/platform: $platform/" "$tmp_file"
-sed -i "s/^problem_id:.*/problem_id: $problem_id/" "$tmp_file"
-sed -i "s/^author:.*/author: $member/" "$tmp_file"
 
-{
-  cat "$tmp_file"
-  echo ""
-  echo "## Imported Source"
-  echo ""
-  cat "$source_md"
-} > "$dest_solution"
+dest_dir="$repo_root/archive/$platform/$problem_id/$user_id"
+src_readme="$source_dir/README.md"
 
-rm -f "$tmp_file"
+if [[ ! -f "$src_readme" ]]; then
+  echo "README.md not found in source directory: $source_dir"
+  exit 1
+fi
 
-echo "Imported to: $dest_solution"
+shopt -s nullglob
+source_candidates=("$source_dir"/*)
+shopt -u nullglob
+
+code_count=0
+code_file=""
+for candidate in "${source_candidates[@]}"; do
+  if [[ -f "$candidate" ]] && [[ "$(basename "$candidate")" != "README.md" ]]; then
+    code_file="$candidate"
+    code_count=$((code_count + 1))
+  fi
+done
+
+if [[ $code_count -eq 0 ]]; then
+  echo "Source code file not found in source directory: $source_dir"
+  exit 1
+fi
+
+if [[ $code_count -gt 1 ]]; then
+  echo "Multiple source files found. Keep one code file in source directory."
+  for candidate in "${source_candidates[@]}"; do
+    if [[ -f "$candidate" ]] && [[ "$(basename "$candidate")" != "README.md" ]]; then
+      echo "  - $candidate"
+    fi
+  done
+  exit 1
+fi
+
+mkdir -p "$dest_dir"
+
+cp "$src_readme" "$dest_dir/README.md"
+cp "$code_file" "$dest_dir/$(basename "$code_file")"
+
+echo "Imported to: $dest_dir"
