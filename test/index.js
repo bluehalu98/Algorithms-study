@@ -17,7 +17,7 @@ input
     else graph[n2] = [n1];
   });
 for (let i = 1; i < dot; i++) {
-  graph[i] = graph[i].sort((a, b) => b - a);
+  graph[i] = graph[i].sort((a, b) => a - b);
 }
 
 const dfsAns = [];
