@@ -12,9 +12,10 @@ function solution(n, computers) {
   }
 
   for (let i = 0; i < n; i++) {
-    if (visited[i]) continue;
-    dfs(i);
-    count++;
+    if (!visited[i]) {
+      dfs(i);
+      count++;
+    }
   }
 
   return count;
